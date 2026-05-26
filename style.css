@@ -346,6 +346,23 @@ tr:hover td {
     background: rgba(255, 255, 255, 0.01);
 }
 
+.referring-link {
+    font-size: 0.8rem;
+    color: var(--accent-indigo);
+    text-decoration: none;
+    max-width: 260px;
+    overflow: hidden;
+    display: block;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: var(--transition-fast);
+}
+
+.referring-link:hover {
+    text-decoration: underline;
+    opacity: 0.85;
+}
+
 /* Badges */
 .badge {
     display: inline-flex;

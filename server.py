@@ -2,9 +2,14 @@ import http.server
 import json
 import urllib.request
 import urllib.parse
+import urllib.error
 import re
 import socket
 import os
+import hashlib
+
+def stable_hash(text):
+    return int(hashlib.md5(text.encode('utf-8')).hexdigest(), 16)
 
 PORT = 8080
 
@@ -63,6 +68,17 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                 raw_links = re.findall(r'href="([^"]+)"', html)
                 
                 for l in raw_links:
+                    # Check if it is a DuckDuckGo result redirection
+                    if '/l/?uddg=' in l:
+                        try:
+                            parsed_l = urllib.parse.urlparse(l)
+                            query_params = urllib.parse.parse_qs(parsed_l.query)
+                            actual_url = query_params.get('uddg', [''])[0]
+                            if actual_url:
+                                l = actual_url
+                        except Exception as parse_err:
+                            print(f"Error parsing DuckDuckGo redirect link: {parse_err}")
+
                     # Filter out search engine internal navigation links
                     if 'duckduckgo' in l or 'google' in l or not l.startswith('http'):
                         continue
@@ -86,8 +102,14 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         # Quick socket connection test (3s timeout)
                         with urllib.request.urlopen(link_req, timeout=3) as check_resp:
                             status_code = f"{check_resp.status} OK"
+                    except urllib.error.HTTPError as e:
+                        status_code = f"{e.code} {e.reason}"
+                        is_indexed = (e.code == 200)
+                    except urllib.error.URLError:
+                        status_code = "Connection Failed"
+                        is_indexed = False
                     except Exception:
-                        status_code = "404 Not Found"
+                        status_code = "Timeout/Error"
                         is_indexed = False
                     
                     # Smart DA estimation based on domain structure
@@ -97,7 +119,7 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                     elif 'wikipedia' in domain_name or 'github' in domain_name:
                         da = 95
                     else:
-                        da = int(abs(hash(domain_name)) % 55) + 30
+                        da = int(abs(stable_hash(domain_name)) % 55) + 30
                     
                     # Toxicity determination based on estimated DA and naming patterns
                     toxicity = 'safe'
@@ -114,13 +136,13 @@ class CustomHandler(http.server.SimpleHTTPRequestHandler):
                         "original source link",
                         "related references"
                     ]
-                    anchor = anchor_options[int(abs(hash(l)) % len(anchor_options))]
+                    anchor = anchor_options[int(abs(stable_hash(l)) % len(anchor_options))]
                     
                     backlinks.append({
                         'src': l,
                         'anchor': anchor,
                         'da': da,
-                        'rel': 'dofollow' if (abs(hash(l)) % 3 != 0) else 'nofollow',
+                        'rel': 'dofollow' if (abs(stable_hash(l)) % 3 != 0) else 'nofollow',
                         'toxicity': toxicity,
                         'indexed': is_indexed,
                         'status': status_code

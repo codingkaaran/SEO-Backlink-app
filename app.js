@@ -265,7 +265,7 @@ function renderBacklinkList() {
             
         return `
             <tr>
-                <td><span style="font-size:0.8rem; color:var(--accent-indigo); max-width:260px; overflow:hidden; display:block; text-overflow:ellipsis; white-space:nowrap;">${l.src}</span></td>
+                <td><a href="${l.src}" target="_blank" rel="noopener noreferrer" class="referring-link">${l.src}</a></td>
                 <td><strong>${l.anchor}</strong></td>
                 <td>DA ${l.da}</td>
                 <td><span class="badge ${l.rel === 'dofollow' ? 'badge-green' : 'badge-amber'}">${l.rel}</span></td>
